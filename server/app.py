@@ -42,6 +42,64 @@ def bakery_by_id(id):
     )
     return response
 
+@app.route('/baked_goods', methods=['POST'])
+def create_baked_good():
+    name = request.form.get("name")
+    price = request.form.get("price")
+    bakery_id = request.form.get("id")
+    
+    if not name or not price or not bakery_id:
+        return make_response(jsonify({'error': 'Name, price, and bakery_id are required.'}), 400)
+
+    existing_good = BakedGood.query.filter_by(name=name).first()
+    if existing_good:
+        return make_response(jsonify({'error': 'A baked good with this name already exists.'}), 400)
+
+    new_good = BakedGood(
+        name=name,
+        price=price,
+        bakery_id=bakery_id
+    )
+    db.session.add(new_good)
+    db.session.commit()
+
+    return jsonify({
+        'name': new_good.name,
+        'price': new_good.price,
+        'bakery_id': new_good.bakery_id
+    }), 201
+
+@app.route('/bakeries/<int:id>', methods=['PATCH'])
+def update_bakery(id):
+    bakery = Bakery.query.get(id)
+    
+    if not bakery:
+        return make_response(jsonify({'error': 'Bakery not found.'}), 404)
+    
+    data = request.form
+    name = data.get('name')
+    
+    if name:
+        bakery.name = name
+    
+    db.session.commit()
+    
+    return make_response(jsonify(bakery.to_dict()), 200)
+
+@app.route('/baked_goods/<int:id>', methods=['DELETE'])
+def delete_baked_good(id):
+    baked_good = BakedGood.query.get(id)
+    
+    if not baked_good:
+        return make_response(jsonify({'error': 'Baked good not found.'}), 404)
+    
+    db.session.delete(baked_good)
+    db.session.commit()
+    
+    return make_response(jsonify({'message': 'Baked good deleted successfully.'}), 200)
+
+
+
 @app.route('/baked_goods/by_price')
 def baked_goods_by_price():
     baked_goods_by_price = BakedGood.query.order_by(BakedGood.price).all()
